@@ -398,7 +398,8 @@ class DSA4Weather() :
 
     def get_weather_string(self) :
         """ Get the current weather in a human-readable format. """
-        res = f'{self.temperature}°C\n'
+        res = f'Today\' weather in {self.region} in {self.season}\n\n'
+        res += f'{self.temperature}°C\n'
         res += f'{cloud_strings[self.cloudiness]}\n'
         res += f'{wind_strings[self.wind]}\n'
         res += f'{precipitation_strings[self.precipitation]}\n'
