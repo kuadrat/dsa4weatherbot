@@ -9,6 +9,7 @@ CB_AUTUMN = 1
 CB_WINTER = 2
 CB_SPRING = 3
 CB_SEASONS = [dsa4w.SUMMER, dsa4w.AUTUMN, dsa4w.WINTER, dsa4w.SPRING]
+CB_REGIONS = dsa4w.REGIONS
 CB_SEASON_SELECT = 'Select season:'
 CB_REGION_SELECT = 'Select region:'
 
@@ -99,6 +100,8 @@ class DSA4WeatherBot() :
         """ Once the region is selected, weather can be calculated. """
         w = self.get_weather_model(update)
         w.roll_new_weather()
+        region = CB_REGIONS[int(update.callback_query.data)]
+        w.region = region
 
         chat = update.callback_query.message.chat
         await chat.send_message(w.get_weather_string())
@@ -114,7 +117,7 @@ class DSA4WeatherBot() :
 if __name__ == "__main__" :
     bot = DSA4WeatherBot()
     with open('token.txt', 'r') as f :
-        token = f.readline()
+        token = f.readline()[:-1]
     app = tge.Application.builder().token(token).build()
     app.add_handler(tge.CommandHandler('start', bot.start))
     app.add_handler(tge.CommandHandler('help', bot.help))
