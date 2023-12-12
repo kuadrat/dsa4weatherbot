@@ -6,6 +6,7 @@ CLOUDS_NONE = 0
 CLOUDS_SOME = 1
 CLOUDS_MANY = 2
 CLOUDS_FULL = 3
+cloud_levels = [CLOUDS_NONE, CLOUDS_SOME, CLOUDS_MANY, CLOUDS_FULL]
 ## Wind strength
 WIND_NONE = 0
 WIND_SOFTER = 1
@@ -14,11 +15,15 @@ WIND_MEDIUM = 3
 WIND_STRONG = 4
 WIND_STRONGER = 5
 WIND_STORM = 6
+wind_levels = [WIND_NONE, WIND_SOFTER, WIND_SOFT, WIND_MEDIUM, WIND_STRONG, 
+               WIND_STRONGER, WIND_STORM]
 ## Precipitation
 PRECIPITATION_NONE = 0
 PRECIPITATION_LIGHT = 1
 PRECIPITATION_MEDIUM = 2
 PRECIPITATION_STRONG = 3
+precipitation_levels = [PRECIPITATION_NONE, PRECIPITATION_LIGHT, 
+                        PRECIPITATION_MEDIUM, PRECIPITATION_STRONG]
 ## Regions
 REGION_ICE = 'Ewiges Eis'
 REGION_NE_HEIGHTS = 'Ehernes Schwert'
@@ -41,10 +46,11 @@ REGIONS = [REGION_ICE, REGION_NE_HEIGHTS, REGION_HIGH_NORTH,
            REGION_SOUTHERN_HORAS, REGION_KHOM, REGION_MERIDIANA, 
            REGION_SOUTHERN_SEA] 
 ## Seasons
-SUMMER = 'summer'
-AUTUMN = 'autumn'
-WINTER = 'winter'
-SPRING = 'spring'
+SUMMER = 'Sommer'
+AUTUMN = 'Herbst'
+WINTER = 'Winter'
+SPRING = 'Frühling'
+SEASONS = [SUMMER, AUTUMN, WINTER, SPRING]
 ## Change flags
 CHANGE_CLOUDINESS = 0
 CHANGE_WIND = 1
@@ -53,25 +59,25 @@ CHANGE_PRECIPITATION = 3
 
 ## Mappings
 cloud_strings = {
-    CLOUDS_NONE: 'no clouds',
-    CLOUDS_SOME: 'some clouds',
-    CLOUDS_MANY: 'mostly cloudy',
-    CLOUDS_FULL: 'full cloud cover'
+    CLOUDS_NONE: 'völlig wolkenlos',
+    CLOUDS_SOME: 'einzelne Wolken',
+    CLOUDS_MANY: 'bewölkt mit Wolkenlücken',
+    CLOUDS_FULL: 'geschlossene Wolkendecke'
 }
 wind_strings = {
-    WIND_NONE: 'no wind',
-    WIND_SOFTER: 'light breeze',
-    WIND_SOFT: 'soft breeze',
-    WIND_MEDIUM: 'fresh breeze',
-    WIND_STRONG: 'strong breeze',
-    WIND_STRONGER: 'strong winds',
-    WIND_STORM: 'stormy winds'
+    WIND_NONE: 'windstill',
+    WIND_SOFTER: 'leichter Wind',
+    WIND_SOFT: 'sanfte Brise',
+    WIND_MEDIUM: 'frische Brise',
+    WIND_STRONG: 'steife Brise',
+    WIND_STRONGER: 'starker Wind',
+    WIND_STORM: 'Sturm'
 }
 precipitation_strings = {
-    PRECIPITATION_NONE: 'no precipitation',
-    PRECIPITATION_LIGHT: 'light precipitation',
-    PRECIPITATION_MEDIUM: 'decent precipitation',
-    PRECIPITATION_STRONG: 'constant, strong precipitation'
+    PRECIPITATION_NONE: 'kein Niederschlag',
+    PRECIPITATION_LIGHT: 'leichter Niederschlag',
+    PRECIPITATION_MEDIUM: 'ergiebiger Niederschlag',
+    PRECIPITATION_STRONG: 'heftiger Niederschlag'
 }
 
 class DSA4Weather() :
@@ -269,8 +275,12 @@ class DSA4Weather() :
        20: [CHANGE_CLOUDINESS, CHANGE_WIND, CHANGE_TEMPERATURE, CHANGE_PRECIPITATION]
     }
 
+    use_original_night_temperature = False
+
     def __init__(self, season=SUMMER, region=REGION_CENTRAL_MIDDLEREALM, 
                  daytime=True) :
+        # Skip the `setter` methods in order to prevent execution of 
+        # `roll_new_weather`.
         self.season = season
         self.region = region
         self.daytime = daytime
@@ -280,6 +290,14 @@ class DSA4Weather() :
     def d20(self) :
         """ Return the result of a 1d20. """
         return randint(1, 20)
+
+    def set_season(self, season):
+        self.season = season
+        self.roll_new_weather()
+
+    def set_region(self, region):
+        self.region = region
+        self.roll_new_weather()
 
     def roll_new_weather(self) :
         """ Create a completely new weather, independent of the possibly 
@@ -360,14 +378,42 @@ class DSA4Weather() :
         else :
             season = self.season
         self.temperature = self.temperature_table[self.region][season]
+        if not self.use_original_night_temperature:
+            self.temperature += 5
+        print("*** ***")
+        print(f"Day 0: {self.temperature}")
+        # :NOTE: The original formulation for night temperatures just seems 
+        # way off.
+        # Use a milder version instead.
+        if self.use_original_night_temperature:
+            self.night_temperature = self.temperature - (self.d20() + 5) 
+        else:
+            self.night_temperature = self.temperature - (self.d20()//4 + 2) 
+        print(f"Night 0: {self.night_temperature}")
 
         ## Step 3.2: add temperature modifiers
-        multiplier = 1 if self.daytime else -1
-        self.temperature += \
-            self.temperature_mod_cloudiness[self.cloudiness] * multiplier
-        self.temperature += self.temperature_mod_wind[self.wind]
+        print(f"[D]Cloudiness: {self.cloudiness}")
+        cloud_mod = self.temperature_mod_cloudiness[self.cloudiness]
+        if not self.use_original_night_temperature:
+            cloud_mod //= 2
+        print(f"[D]Cloud mod: {cloud_mod}")
+        self.temperature += cloud_mod
+        print(f"Day cloud: {self.temperature}")
+        self.night_temperature -= cloud_mod
+        # Min temperature must not grow larger than max temperature
+        if self.night_temperature >= self.temperature - 1:
+            self.night_temperature = self.temperature - 1
+        print(f"Night cloud: {self.night_temperature}")
+
+        wind_mod = self.temperature_mod_wind[self.wind]
+        self.temperature += wind_mod
+        print(f"[D]Wind: {self.wind}")
+        print(f"Day wind: {self.temperature}")
+        self.night_temperature += wind_mod
+        print(f"Night wind: {self.night_temperature}")
+
         # Random modifier
-        self.temperature += randint(-2, 2)
+#        self.temperature += randint(-2, 2)
 
     def roll_precipitation(self) :
         """ Determine type of precipitation depending on wind strength. 
@@ -391,7 +437,8 @@ class DSA4Weather() :
             self.precipitation = PRECIPITATION_STRONG
 
     def print_weather(self) :
-        print(self.temperature)
+        print(f"Daily average T: {self.temperature} C")
+        print(f"Nightly minimum T: {self.night_temperature} C")
         print(wind_strings[self.wind])
         print(cloud_strings[self.cloudiness])
         print(precipitation_strings[self.precipitation])
@@ -406,24 +453,42 @@ class DSA4Weather() :
         return res
 
 if __name__ == "__main__" :
-    W = DSA4Weather()
-#    W.season = AUTUMN
-    W.region = REGION_KHOM
+    W = DSA4Weather(region=REGION_BORNLAND_THORWAL, season=AUTUMN)
+#    W = DSA4Weather(region=REGION_KHOM, season=AUTUMN)
     print(W.region, W.season)
     data = []
-    for i in range(20) :
+    for i in range(30) :
         W.roll_next_weather()
         print(80*"=")
         W.print_weather()
-        data.append([W.temperature, W.cloudiness, W.wind, W.precipitation])
+        data.append([W.temperature, W.night_temperature, W.cloudiness, 
+                     W.wind, W.precipitation])
 
     import matplotlib.pyplot as plt
     import numpy as np
-    data = np.array(data)
-    plt.plot(data[:,0], 'r-', label='Temp')
-    plt.plot(data[:,1], 'k--', label='Clouds')
-    plt.plot(data[:,2], 'g-', label='Wind')
-    plt.plot(data[:,3], 'b-', label='Precipitation')
+    from matplotlib.gridspec import GridSpec
 
-    plt.legend()
+    data = np.array(data)
+    x = np.arange(len(data))
+    temp = data[:,0]
+    night_temp = data[:,1]
+
+    fig = plt.figure(layout="constrained")
+    gs = GridSpec(nrows=2, ncols=2, figure=fig)
+
+    ax_temp = fig.add_subplot(gs[0,0])
+    ax_temp.plot(x, temp, 'r-', label='Temp')
+    ax_temp.plot(x, night_temp, 'r--', label='Night Temp')
+    ax_temp.fill_between(x, temp, night_temp, color="red", alpha=0.5)
+
+    ax_clouds = fig.add_subplot(gs[1, 0])
+    ax_clouds.plot(data[:,2], 'k--', label='Clouds')
+
+    ax_wind = fig.add_subplot(gs[0, 1])
+    ax_wind.plot(data[:,3], 'g-', label='Wind')
+
+    ax_pp = fig.add_subplot(gs[1, 1])
+    ax_pp.plot(data[:,4], 'b-', label='Precipitation')
+
+#    plt.legend()
     plt.show()
