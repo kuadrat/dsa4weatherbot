@@ -275,15 +275,14 @@ class DSA4Weather() :
        20: [CHANGE_CLOUDINESS, CHANGE_WIND, CHANGE_TEMPERATURE, CHANGE_PRECIPITATION]
     }
 
-    use_original_night_temperature = False
-
     def __init__(self, season=SUMMER, region=REGION_CENTRAL_MIDDLEREALM, 
-                 daytime=True) :
+                 daytime=True, use_original=True) :
         # Skip the `setter` methods in order to prevent execution of 
         # `roll_new_weather`.
         self.season = season
         self.region = region
         self.daytime = daytime
+        self.use_original_night_temperature = use_original
         # Initialize a weather
         self.roll_new_weather()
 
@@ -380,8 +379,8 @@ class DSA4Weather() :
         self.temperature = self.temperature_table[self.region][season]
         if not self.use_original_night_temperature:
             self.temperature += 5
-        print("*** ***")
-        print(f"Day 0: {self.temperature}")
+#        print("*** ***")
+#        print(f"Day 0: {self.temperature}")
         # :NOTE: The original formulation for night temperatures just seems 
         # way off.
         # Use a milder version instead.
@@ -389,28 +388,28 @@ class DSA4Weather() :
             self.night_temperature = self.temperature - (self.d20() + 5) 
         else:
             self.night_temperature = self.temperature - (self.d20()//4 + 2) 
-        print(f"Night 0: {self.night_temperature}")
+#        print(f"Night 0: {self.night_temperature}")
 
         ## Step 3.2: add temperature modifiers
-        print(f"[D]Cloudiness: {self.cloudiness}")
+#        print(f"[D]Cloudiness: {self.cloudiness}")
         cloud_mod = self.temperature_mod_cloudiness[self.cloudiness]
         if not self.use_original_night_temperature:
             cloud_mod //= 2
-        print(f"[D]Cloud mod: {cloud_mod}")
+#        print(f"[D]Cloud mod: {cloud_mod}")
         self.temperature += cloud_mod
-        print(f"Day cloud: {self.temperature}")
+#        print(f"Day cloud: {self.temperature}")
         self.night_temperature -= cloud_mod
         # Min temperature must not grow larger than max temperature
         if self.night_temperature >= self.temperature - 1:
             self.night_temperature = self.temperature - 1
-        print(f"Night cloud: {self.night_temperature}")
+#        print(f"Night cloud: {self.night_temperature}")
 
         wind_mod = self.temperature_mod_wind[self.wind]
         self.temperature += wind_mod
-        print(f"[D]Wind: {self.wind}")
-        print(f"Day wind: {self.temperature}")
+#        print(f"[D]Wind: {self.wind}")
+#        print(f"Day wind: {self.temperature}")
         self.night_temperature += wind_mod
-        print(f"Night wind: {self.night_temperature}")
+#        print(f"Night wind: {self.night_temperature}")
 
         # Random modifier
 #        self.temperature += randint(-2, 2)
@@ -476,7 +475,7 @@ if __name__ == "__main__" :
     fig = plt.figure(layout="constrained")
     gs = GridSpec(nrows=2, ncols=2, figure=fig)
 
-    ax_temp = fig.add_subplot(gs[0,0])
+    ax_temp = fig.add_subplot(gs[0, 0])
     ax_temp.plot(x, temp, 'r-', label='Temp')
     ax_temp.plot(x, night_temp, 'r--', label='Night Temp')
     ax_temp.fill_between(x, temp, night_temp, color="red", alpha=0.5)

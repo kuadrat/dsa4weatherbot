@@ -1,6 +1,6 @@
 find_icon_for_weather = function(forecast, day) {
-  message("fifw")
-  message(day)
+#  message("fifw")
+#  message(day)
   cloudiness = forecast$cloudiness[[day]]
   precipitation = forecast$precipitation[[day]]
   wind = forecast$wind[[day]]
@@ -148,7 +148,7 @@ make_pdf = function(forecast) {
   system(sprintf("cp %s %s", output_name, 
                  file.path(original_wd, "latest_output.pdf")))
   # Cleanup.
-  setwd(original_wd)
+ setwd(original_wd)
   unlink(tmpdirname, recursive = TRUE)
 }
 

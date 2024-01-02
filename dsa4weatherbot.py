@@ -90,7 +90,7 @@ class DSA4WeatherBot() :
         """ Set the weather model's season and query region. """
         w = self.get_weather_model(update)
         season = int(update.callback_query.data)
-        w.season = CB_SEASONS[season]
+        w.set_season() = CB_SEASONS[season]
 
         chat = update.callback_query.message.chat
         reply_markup = tgm.InlineKeyboardMarkup(self.keyboard_regions)
@@ -101,7 +101,7 @@ class DSA4WeatherBot() :
         w = self.get_weather_model(update)
         w.roll_new_weather()
         region = CB_REGIONS[int(update.callback_query.data)]
-        w.region = region
+        w.set_region() = region
 
         chat = update.callback_query.message.chat
         await chat.send_message(w.get_weather_string())

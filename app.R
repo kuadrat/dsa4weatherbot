@@ -3,6 +3,7 @@ library(reticulate)
 library(shiny)
 
 source("make_pdf.R")
+source("./Rsource/SwitchButton.R")
 
 dsa4w = import("dsa4weather.dsa4weather")
 
@@ -22,8 +23,6 @@ bb_ypad = 500
 n_rows = ceiling(forecast_length / days_per_row)
 
 #_Utilities_____________________________________________________________________
-
-
 
 tick_format_function = function(values) {
   func_text = "function(value) { const values = ["
@@ -86,38 +85,45 @@ print(tick_format_function(c("a", "b", "c")))
 
 #_UI____________________________________________________________________________
 
-ui = pageWithSidebar(
-  headerPanel("DSA 4 Wettergenerator"),
-  sidebarPanel(
-    selectInput("region", "Region", dsa4w$REGIONS),
-    selectInput("season", "Jahreszeit", dsa4w$SEASONS),
-    downloadButton("download", "Download pdf"),
-    width = 2
+ui = fluidPage(
+  tags$head(
+    tags$link(rel = "stylesheet", type = "text/css", href = "button.css")
   ),
-  mainPanel(tabsetPanel(
-#_______________________________________________________________________________
-    tabPanel(
-      "Monatsprognose",
-      mainPanel(
-        lapply(1:n_rows, function(row) {
-          first_day = (row-1) * days_per_row + 1
-          last_day = min(forecast_length, row * days_per_row)
-          days = first_day:last_day
-          fluidRow(lapply(days, forecast_symbol_layout))
-        }
-        ),
-        width = 12
-      )
+  headerPanel("DSA 4 Wettergenerator"),
+  sidebarLayout(
+    sidebarPanel(
+      selectInput("region", "Region", dsa4w$REGIONS),
+      selectInput("season", "Jahreszeit", dsa4w$SEASONS),
+      switchButton("use_modified", label = "Angepasste Temperaturwerte verwenden",
+                    value = FALSE, col = "GB", type = "EA"),
+      downloadButton("download", "Download pdf"),
+      width = 2
     ),
-#_______________________________________________________________________________
-    tabPanel(
-      "Parameterverläufe",
-      billboarderOutput(outputId = "temperature", height = plot_height),
-      billboarderOutput(outputId = "precipitation", height = plot_height),
-      billboarderOutput(outputId = "wind", height = plot_height),
-      billboarderOutput(outputId = "cloudiness", height = plot_height)
-    )
-  ))
+    mainPanel(tabsetPanel(
+  #_______________________________________________________________________________
+      tabPanel(
+        "Monatsprognose",
+        mainPanel(
+          lapply(1:n_rows, function(row) {
+            first_day = (row-1) * days_per_row + 1
+            last_day = min(forecast_length, row * days_per_row)
+            days = first_day:last_day
+            fluidRow(lapply(days, forecast_symbol_layout))
+          }
+          ),
+          width = 12
+        )
+      ),
+  #_______________________________________________________________________________
+      tabPanel(
+        "Parameterverläufe",
+        billboarderOutput(outputId = "temperature", height = plot_height),
+        billboarderOutput(outputId = "precipitation", height = plot_height),
+        billboarderOutput(outputId = "wind", height = plot_height),
+        billboarderOutput(outputId = "cloudiness", height = plot_height)
+      )
+    ))
+  )
 )
 
 #_Server________________________________________________________________________
@@ -126,7 +132,8 @@ server = function(input, output, session) {
 
   weather_generator = reactive({
     dsa4w$DSA4Weather(season = input$season,
-                      region = input$region
+                      region = input$region,
+                      use_original = !input$use_modified
     )
   })
 
@@ -282,7 +289,7 @@ server = function(input, output, session) {
   )
 
   output$download = downloadHandler(
-    filename = function() {"test.pdf"},
+    filename = function() {"weather.pdf"},
     content = function(con) {
       make_pdf(forecast())
       file.copy("latest_output.pdf", con)
