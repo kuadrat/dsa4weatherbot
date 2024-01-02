@@ -1,6 +1,7 @@
 library(billboarder)
 library(reticulate)
 library(shiny)
+library(shinyBS)
 
 source("make_pdf.R")
 source("./Rsource/SwitchButton.R")
@@ -17,6 +18,13 @@ col_width = 3
 row_height = 1
 days_per_row = 4
 bb_ypad = 500
+
+modification_explanation = paste(
+"Die originalen Wettertabellen führen häufig zu sehr unrealistischen",
+"Situationen, wie zum Beispiel regelmässigen Sommerfrösten im Mittelreich.",
+"Bei Aktivierung dieser Option, werden einige Berechnungsmethoden für", 
+"Temperaturwerte leicht angepasst, um dem entgegenzuwirken."
+)
 
 #_Dependent_constants___________________________________________________________
 
@@ -94,8 +102,10 @@ ui = fluidPage(
     sidebarPanel(
       selectInput("region", "Region", dsa4w$REGIONS),
       selectInput("season", "Jahreszeit", dsa4w$SEASONS),
-      switchButton("use_modified", label = "Angepasste Temperaturwerte verwenden",
-                    value = FALSE, col = "GB", type = "EA"),
+#      switchButton("use_modified", label = "Angepasste Temperaturwerte verwenden",
+#                    value = FALSE, col = "GB", type = "EA"),
+      checkboxInput("use_modified", label = "Angepasste Temperaturwerte verwenden"),
+      bsTooltip("use_modified", title = modification_explanation),
       downloadButton("download", "Download pdf"),
       width = 2
     ),
@@ -295,7 +305,6 @@ server = function(input, output, session) {
       file.copy("latest_output.pdf", con)
     }
   )
-
 }
 
 #_Run___________________________________________________________________________
